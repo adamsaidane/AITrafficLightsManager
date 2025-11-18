@@ -23,24 +23,24 @@
     <route id="W_to_E" edges="W_to_C C_to_E"/>
     <route id="W_to_N" edges="W_to_C C_to_N"/>
     
-    <!-- Flux de véhicules (exemple avec distribution aléatoire) -->
-    <flow id="flow_N" type="car" begin="0" end="3600" probability="0.2" 
-          departLane="random" departSpeed="max">
-        <route edges="N_to_C C_to_S"/>
-    </flow>
-    
-    <flow id="flow_S" type="car" begin="0" end="3600" probability="0.2" 
-          departLane="random" departSpeed="max">
-        <route edges="S_to_C C_to_N"/>
-    </flow>
-    
-    <flow id="flow_E" type="car" begin="0" end="3600" probability="0.2" 
-          departLane="random" departSpeed="max">
-        <route edges="E_to_C C_to_W"/>
-    </flow>
-    
-    <flow id="flow_W" type="car" begin="0" end="3600" probability="0.2" 
-          departLane="random" departSpeed="max">
-        <route edges="W_to_C C_to_E"/>
-    </flow>
+    <!-- Flux de véhicules avec distribution réaliste -->
+    <!-- NORD: 40% tout droit, 30% droite, 30% gauche -->
+    <flow id="flow_N_straight" type="car" begin="0" end="3600" probability="0.08" route="N_to_S" departLane="1"/>
+    <flow id="flow_N_right" type="car" begin="0" end="3600" probability="0.06" route="N_to_W" departLane="3"/>
+    <flow id="flow_N_left" type="car" begin="0" end="3600" probability="0.06" route="N_to_E" departLane="0"/>
+
+    <!-- SUD: 40% tout droit, 30% droite, 30% gauche -->
+    <flow id="flow_S_straight" type="car" begin="0" end="3600" probability="0.08" route="S_to_N" departLane="1"/>
+    <flow id="flow_S_right" type="car" begin="0" end="3600" probability="0.06" route="S_to_E" departLane="3"/>
+    <flow id="flow_S_left" type="car" begin="0" end="3600" probability="0.06" route="S_to_W" departLane="0"/>
+
+    <!-- EST: 40% tout droit, 30% droite, 30% gauche -->
+    <flow id="flow_E_straight" type="car" begin="0" end="3600" probability="0.08" route="E_to_W" departLane="1"/>
+    <flow id="flow_E_right" type="car" begin="0" end="3600" probability="0.06" route="E_to_N" departLane="3"/>
+    <flow id="flow_E_left" type="car" begin="0" end="3600" probability="0.06" route="E_to_S" departLane="0"/>
+
+    <!-- OUEST: 40% tout droit, 30% droite, 30% gauche -->
+    <flow id="flow_W_straight" type="car" begin="0" end="3600" probability="0.08" route="W_to_E" departLane="1"/>
+    <flow id="flow_W_right" type="car" begin="0" end="3600" probability="0.06" route="W_to_S" departLane="3"/>
+    <flow id="flow_W_left" type="car" begin="0" end="3600" probability="0.06" route="W_to_N" departLane="0"/>
 </routes>
