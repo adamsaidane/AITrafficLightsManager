@@ -1,0 +1,13 @@
+<edges>
+    <!-- Routes vers le centre (entrées) - 4 voies chacune -->
+    <edge id="N_to_C" from="north" to="center" numLanes="4" speed="13.89"/>
+    <edge id="S_to_C" from="south" to="center" numLanes="4" speed="13.89"/>
+    <edge id="E_to_C" from="east" to="center" numLanes="4" speed="13.89"/>
+    <edge id="W_to_C" from="west" to="center" numLanes="4" speed="13.89"/>
+    
+    <!-- Routes depuis le centre (sorties) - 4 voies chacune -->
+    <edge id="C_to_N" from="center" to="north" numLanes="4" speed="13.89"/>
+    <edge id="C_to_S" from="center" to="south" numLanes="4" speed="13.89"/>
+    <edge id="C_to_E" from="center" to="east" numLanes="4" speed="13.89"/>
+    <edge id="C_to_W" from="center" to="west" numLanes="4" speed="13.89"/>
+</edges>

@@ -1,0 +1,46 @@
+<routes>
+    <!-- Types de véhicules -->
+    <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5" maxSpeed="50"/>
+    
+    <!-- Routes possibles -->
+    <!-- Depuis le Nord -->
+    <route id="N_to_W" edges="N_to_C C_to_W"/>  <!-- Droite -->
+    <route id="N_to_S" edges="N_to_C C_to_S"/>  <!-- Tout droit -->
+    <route id="N_to_E" edges="N_to_C C_to_E"/>  <!-- Gauche -->
+    
+    <!-- Depuis le Sud -->
+    <route id="S_to_E" edges="S_to_C C_to_E"/>
+    <route id="S_to_N" edges="S_to_C C_to_N"/>
+    <route id="S_to_W" edges="S_to_C C_to_W"/>
+    
+    <!-- Depuis l'Est -->
+    <route id="E_to_N" edges="E_to_C C_to_N"/>
+    <route id="E_to_W" edges="E_to_C C_to_W"/>
+    <route id="E_to_S" edges="E_to_C C_to_S"/>
+    
+    <!-- Depuis l'Ouest -->
+    <route id="W_to_S" edges="W_to_C C_to_S"/>
+    <route id="W_to_E" edges="W_to_C C_to_E"/>
+    <route id="W_to_N" edges="W_to_C C_to_N"/>
+    
+    <!-- Flux de véhicules (exemple avec distribution aléatoire) -->
+    <flow id="flow_N" type="car" begin="0" end="3600" probability="0.2" 
+          departLane="random" departSpeed="max">
+        <route edges="N_to_C C_to_S"/>
+    </flow>
+    
+    <flow id="flow_S" type="car" begin="0" end="3600" probability="0.2" 
+          departLane="random" departSpeed="max">
+        <route edges="S_to_C C_to_N"/>
+    </flow>
+    
+    <flow id="flow_E" type="car" begin="0" end="3600" probability="0.2" 
+          departLane="random" departSpeed="max">
+        <route edges="E_to_C C_to_W"/>
+    </flow>
+    
+    <flow id="flow_W" type="car" begin="0" end="3600" probability="0.2" 
+          departLane="random" departSpeed="max">
+        <route edges="W_to_C C_to_E"/>
+    </flow>
+</routes>

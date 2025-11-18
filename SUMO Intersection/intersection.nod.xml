@@ -1,0 +1,10 @@
+<nodes>
+    <!-- Centre de l'intersection -->
+    <node id="center" x="0.0" y="0.0" type="traffic_light"/>
+    
+    <!-- Nœuds aux extrémités (100m de distance) -->
+    <node id="north" x="0.0" y="100.0" type="priority"/>
+    <node id="south" x="0.0" y="-100.0" type="priority"/>
+    <node id="east" x="100.0" y="0.0" type="priority"/>
+    <node id="west" x="-100.0" y="0.0" type="priority"/>
+</nodes>

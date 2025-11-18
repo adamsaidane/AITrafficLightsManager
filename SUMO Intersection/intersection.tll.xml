@@ -1,0 +1,21 @@
+<tlLogics>
+    <tlLogic id="center" type="static" programID="0" offset="0">
+        <!-- Phase 1: Nord-Sud tout droit + virage à droite permanent -->
+        <!-- 16 états: N(4), S(4), E(4), W(4) -->
+        <!-- Ordre: N0,N1,N2,N3, S0,S1,S2,S3, E0,E1,E2,E3, W0,W1,W2,W3 -->
+        <phase duration="31" state="GggGrrrGggGrrrrr"/>
+        <phase duration="3"  state="yyyGrrryyyyGrrrr"/>
+        
+        <!-- Phase 2: Est-Ouest tout droit + virage à droite permanent -->
+        <phase duration="31" state="rrrGGggrrrrGggGr"/>
+        <phase duration="3"  state="rrrGyyyrrrrGyyyG"/>
+        
+        <!-- Phase 3: Virages à gauche Nord-Sud -->
+        <phase duration="15" state="rrrGrrrrrrrGrrrr"/>
+        <phase duration="3"  state="rrrGrrrrrrrGrrrr"/>
+        
+        <!-- Phase 4: Virages à gauche Est-Ouest -->
+        <phase duration="15" state="rrrGrrrrrrrrGrrr"/>
+        <phase duration="3"  state="rrrGrrrrrrrrGrrr"/>
+    </tlLogic>
+</tlLogics>

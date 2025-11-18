@@ -1,0 +1,30 @@
+<connections>
+    <!-- Depuis le NORD -->
+    <!-- Voie 0 (droite): tourne à droite vers OUEST -->
+    <connection from="N_to_C" to="C_to_W" fromLane="0" toLane="0"/>
+    
+    <!-- Voies 1-2 (centre): vont tout droit vers SUD -->
+    <connection from="N_to_C" to="C_to_S" fromLane="1" toLane="1"/>
+    <connection from="N_to_C" to="C_to_S" fromLane="2" toLane="2"/>
+    
+    <!-- Voie 3 (gauche): tourne à gauche vers EST -->
+    <connection from="N_to_C" to="C_to_E" fromLane="3" toLane="3"/>
+    
+    <!-- Depuis le SUD -->
+    <connection from="S_to_C" to="C_to_E" fromLane="0" toLane="0"/>
+    <connection from="S_to_C" to="C_to_N" fromLane="1" toLane="1"/>
+    <connection from="S_to_C" to="C_to_N" fromLane="2" toLane="2"/>
+    <connection from="S_to_C" to="C_to_W" fromLane="3" toLane="3"/>
+    
+    <!-- Depuis l'EST -->
+    <connection from="E_to_C" to="C_to_N" fromLane="0" toLane="0"/>
+    <connection from="E_to_C" to="C_to_W" fromLane="1" toLane="1"/>
+    <connection from="E_to_C" to="C_to_W" fromLane="2" toLane="2"/>
+    <connection from="E_to_C" to="C_to_S" fromLane="3" toLane="3"/>
+    
+    <!-- Depuis l'OUEST -->
+    <connection from="W_to_C" to="C_to_S" fromLane="0" toLane="0"/>
+    <connection from="W_to_C" to="C_to_E" fromLane="1" toLane="1"/>
+    <connection from="W_to_C" to="C_to_E" fromLane="2" toLane="2"/>
+    <connection from="W_to_C" to="C_to_N" fromLane="3" toLane="3"/>
+</connections>
