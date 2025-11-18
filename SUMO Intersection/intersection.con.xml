@@ -1,45 +1,45 @@
 <connections>
     <!-- ===================== DEPUIS LE NORD ===================== -->
     <!-- Voie 0 (la plus à droite): tourne à droite vers OUEST -->
-    <connection from="N_to_C" to="C_to_W" fromLane="0" toLane="3" dir="r"/>
+    <connection from="N_to_C" to="C_to_W" fromLane="0" toLane="0" dir="r"/>
 
     <!-- Voies 1-2 (centre): vont tout droit vers SUD -->
     <connection from="N_to_C" to="C_to_S" fromLane="1" toLane="1" dir="s"/>
     <connection from="N_to_C" to="C_to_S" fromLane="2" toLane="2" dir="s"/>
 
     <!-- Voie 3 (la plus à gauche): tourne à gauche vers EST -->
-    <connection from="N_to_C" to="C_to_E" fromLane="3" toLane="0" dir="l"/>
+    <connection from="N_to_C" to="C_to_E" fromLane="3" toLane="3" dir="l"/>
 
     <!-- ===================== DEPUIS LE SUD ===================== -->
     <!-- Voie 0 (droite): tourne à droite vers EST -->
-    <connection from="S_to_C" to="C_to_E" fromLane="0" toLane="3" dir="r"/>
+    <connection from="S_to_C" to="C_to_E" fromLane="0" toLane="0" dir="r"/>
 
     <!-- Voies 1-2 (centre): vont tout droit vers NORD -->
     <connection from="S_to_C" to="C_to_N" fromLane="1" toLane="1" dir="s"/>
     <connection from="S_to_C" to="C_to_N" fromLane="2" toLane="2" dir="s"/>
 
     <!-- Voie 3 (gauche): tourne à gauche vers OUEST -->
-    <connection from="S_to_C" to="C_to_W" fromLane="3" toLane="0" dir="l"/>
+    <connection from="S_to_C" to="C_to_W" fromLane="3" toLane="3" dir="l"/>
 
     <!-- ===================== DEPUIS L'EST ===================== -->
     <!-- Voie 0 (droite): tourne à droite vers NORD -->
-    <connection from="E_to_C" to="C_to_N" fromLane="0" toLane="3" dir="r"/>
+    <connection from="E_to_C" to="C_to_N" fromLane="0" toLane="0" dir="r"/>
 
     <!-- Voies 1-2 (centre): vont tout droit vers OUEST -->
     <connection from="E_to_C" to="C_to_W" fromLane="1" toLane="1" dir="s"/>
     <connection from="E_to_C" to="C_to_W" fromLane="2" toLane="2" dir="s"/>
 
     <!-- Voie 3 (gauche): tourne à gauche vers SUD -->
-    <connection from="E_to_C" to="C_to_S" fromLane="3" toLane="0" dir="l"/>
+    <connection from="E_to_C" to="C_to_S" fromLane="3" toLane="3" dir="l"/>
 
     <!-- ===================== DEPUIS L'OUEST ===================== -->
     <!-- Voie 0 (droite): tourne à droite vers SUD -->
-    <connection from="W_to_C" to="C_to_S" fromLane="0" toLane="3" dir="r"/>
+    <connection from="W_to_C" to="C_to_S" fromLane="0" toLane="0" dir="r"/>
 
     <!-- Voies 1-2 (centre): vont tout droit vers EST -->
     <connection from="W_to_C" to="C_to_E" fromLane="1" toLane="1" dir="s"/>
     <connection from="W_to_C" to="C_to_E" fromLane="2" toLane="2" dir="s"/>
 
     <!-- Voie 3 (gauche): tourne à gauche vers NORD -->
-    <connection from="W_to_C" to="C_to_N" fromLane="3" toLane="0" dir="l"/>
+    <connection from="W_to_C" to="C_to_N" fromLane="3" toLane="3" dir="l"/>
 </connections>
