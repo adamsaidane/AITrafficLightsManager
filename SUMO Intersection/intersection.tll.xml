@@ -1,22 +1,37 @@
 <tlLogics>
     <tlLogic id="center" type="static" programID="0" offset="0">
-        <!-- Phase 1: Nord-Sud tout droit (virages à droite toujours verts) -->
-        <!-- G = vert prioritaire pour virage à droite (toujours) -->
-        <!-- g = vert normal pour tout droit -->
-        <!-- r = rouge pour virage à gauche -->
-        <phase duration="31" state="GggrGggrGggrGggr"/>
-        <phase duration="3"  state="GyyGGyyGGyyGGyyG"/>
 
-        <!-- Phase 2: Est-Ouest tout droit (virages à droite toujours verts) -->
-        <phase duration="31" state="GrrrGrrrGggrGggr"/>
-        <phase duration="3"  state="GrrrGrrrGyyGGyyG"/>
+        <!-- ========== Phase 1: Nord-Sud TOUT DROIT seulement ========== -->
+        <!-- Nord: droite(G), droit(g,g), gauche(r) -->
+        <!-- Sud:  droite(G), droit(g,g), gauche(r) -->
+        <!-- Est:  TOUT ROUGE sauf droite(G) -->
+        <!-- Ouest: TOUT ROUGE sauf droite(G) -->
+        <phase duration="31" state="GggrGrrrGggrGrrr"/>
+        <phase duration="3"  state="GyyrGrrrGyyrGrrr"/>
 
-        <!-- Phase 3: Virages à gauche Nord-Sud -->
-        <phase duration="15" state="GrrgGrrgGrrrGrrr"/>
-        <phase duration="3"  state="GrryGrryGrrrGrrr"/>
+        <!-- ========== Phase 2: Est-Ouest TOUT DROIT seulement ========== -->
+        <!-- Nord: TOUT ROUGE sauf droite(G) -->
+        <!-- Sud:  TOUT ROUGE sauf droite(G) -->
+        <!-- Est:  droite(G), droit(g,g), gauche(r) -->
+        <!-- Ouest: droite(G), droit(g,g), gauche(r) -->
+        <phase duration="31" state="GrrrGggrGrrrGggr"/>
+        <phase duration="3"  state="GrrrGyyrGrrrGyyr"/>
 
-        <!-- Phase 4: Virages à gauche Est-Ouest -->
-        <phase duration="15" state="GrrrGrrrGrrgGrrg"/>
-        <phase duration="3"  state="GrrrGrrrGrryGrry"/>
+        <!-- ========== Phase 3: GAUCHE Nord et Sud uniquement ========== -->
+        <!-- Nord: droite(G), droit(r,r), gauche(g) - Peut tourner à gauche -->
+        <!-- Sud:  TOUT ROUGE sauf droite(G) -->
+        <!-- Est:  TOUT ROUGE sauf droite(G) -->
+        <!-- Ouest: TOUT ROUGE sauf droite(G) -->
+        <phase duration="10" state="GrrgGrrrGrrgGrrr"/>
+        <phase duration="3"  state="GrryGrrrGrryGrrr"/>
+
+        <!-- ========== Phase 4: GAUCHE Ouest et Est uniquement ========== -->
+        <!-- Nord: TOUT ROUGE sauf droite(G) -->
+        <!-- Sud:  TOUT ROUGE sauf droite(G) -->
+        <!-- Est:  droite(G), droit(r,r), gauche(g) - Peut tourner à gauche -->
+        <!-- Ouest: droite(G), droit(r,r), gauche(g) - Peut tourner à gauche -->
+        <phase duration="10" state="GrrrGrrgGrrrGrrg"/>
+        <phase duration="3"  state="GrrrGrryGrrrGrry"/>
+
     </tlLogic>
 </tlLogics>
