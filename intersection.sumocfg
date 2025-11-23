@@ -1,0 +1,10 @@
+<configuration>
+    <input>
+        <net-file value="./SUMO intersection/intersection.net.xml"/>
+        <route-files value="./SUMO intersection/intersection.rou.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="3600"/>
+    </time>
+</configuration>
