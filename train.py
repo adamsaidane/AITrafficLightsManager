@@ -27,10 +27,10 @@ class Config:
     MAX_GREEN_TIME = 60
     YELLOW_TIME = 3
     TOTAL_STEPS = 3600
-    NUM_EPISODES = 100
+    NUM_EPISODES = 5000
 
     # Q-Learning avec les 17 phases compatibles
-    ALPHA = 0.1  # Learning rate
+    ALPHA = 0.01  # Learning rate
     GAMMA = 0.95  # Discount factor (augmenté pour vision long terme)
     EPSILON_START = 1.0
     EPSILON_DECAY = 0.995  # Décroissance plus agressive
