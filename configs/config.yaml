@@ -1,0 +1,93 @@
+simulation:
+  tl_id: "center"
+  min_green_time: 10
+  max_green_time: 60
+  yellow_time: 3
+  total_steps: 3600
+  num_episodes: 500
+  sumo_cfg: "intersection.sumocfg"
+  net_file: "./SUMO intersection/intersection.net.xml"
+  route_file: "./SUMO intersection/intersection.rou.xml"
+  lanes:
+    - "N_to_C_0"
+    - "N_to_C_1"
+    - "N_to_C_2"
+    - "N_to_C_3"
+    - "S_to_C_0"
+    - "S_to_C_1"
+    - "S_to_C_2"
+    - "S_to_C_3"
+    - "E_to_C_0"
+    - "E_to_C_1"
+    - "E_to_C_2"
+    - "E_to_C_3"
+    - "W_to_C_0"
+    - "W_to_C_1"
+    - "W_to_C_2"
+    - "W_to_C_3"
+  phases:
+    0: "GggrGrrrGggrGrrr" # Nord-Sud droit
+    1: "GrrrGggrGrrrGggr" # Est-Ouest droit
+    2: "GggrGrrgGrrrGrrr" # Nord droit + Sud gauche
+    3: "GrrgGggrGrrrGrrr" # Sud droit + Nord gauche
+    4: "GrrrGrrrGggrGrrg" # Est droit + Ouest gauche
+    5: "GrrrGrrrGrrgGggr" # Ouest droit + Est gauche
+    6: "GrrgGrrrGrrgGrrr" # Nord+Sud gauche
+    7: "GrrrGrrgGrrrGrrg" # Est+Ouest gauche
+
+q_learning:
+  alpha: 0.01
+  gamma: 0.95
+  epsilon_start: 1.0
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+  num_pressure_levels: 5
+
+dqn:
+  learning_rate: 0.0005
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay_steps: 50000
+  batch_size: 64
+  replay_buffer_size: 50000
+  target_update_freq: 500
+  min_replay_size: 1000
+  double_dqn: true
+  dueling: true
+  gradient_clip: 10.0
+  tau: 0.005
+
+ppo:
+  learning_rate: 0.0003
+  gamma: 0.99
+  lam: 0.95
+  clip_eps: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  update_epochs: 10
+  n_steps: 2048
+  mini_batch_size: 64
+  gradient_clip: 0.5
+
+network:
+  hidden_sizes: [256, 256]
+  activation: "relu"
+
+reward:
+  wait_multiplier: -0.1
+  throughput_multiplier: 1.0
+  queue_multiplier: -0.05
+  switch_penalty: -2.0
+  normalize: true
+
+paths:
+  models_dir: "models"
+  plots_dir: "plots"
+  logs_dir: "logs"
+  experiments_dir: "experiments"
+
+logging:
+  log_interval: 10              # episodes
+  save_interval: 50             # episodes
+  tensorboard: true
