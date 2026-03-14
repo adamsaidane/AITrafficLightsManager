@@ -36,38 +36,38 @@ simulation:
     7: "GrrrGrrgGrrrGrrg" # Est+Ouest gauche
 
 q_learning:
-  alpha: 0.01
+  alpha: 0.05                  # FIX: augmenté (0.01 trop lent pour 500 ep)
   gamma: 0.95
   epsilon_start: 1.0
-  epsilon_decay: 0.995
-  epsilon_min: 0.01
+  epsilon_decay: 0.998         # FIX: ralenti (0.995 → epsilon_min trop vite)
+  epsilon_min: 0.05            # FIX: garde plus d'exploration résiduelle
   num_pressure_levels: 5
 
 dqn:
   learning_rate: 0.0005
   gamma: 0.99
   epsilon_start: 1.0
-  epsilon_end: 0.01
-  epsilon_decay_steps: 50000
+  epsilon_end: 0.05            # FIX: 0.05 au lieu de 0.01 (évite collapse)
+  epsilon_decay_steps: 400000  # FIX: ~111 épisodes × 3600 pas (était 50000 = 14 épisodes)
   batch_size: 64
-  replay_buffer_size: 50000
-  target_update_freq: 500
-  min_replay_size: 1000
+  replay_buffer_size: 100000   # FIX: doublé pour meilleure diversité
+  target_update_freq: 1000     # FIX: moins fréquent = cible plus stable
+  min_replay_size: 5000        # FIX: plus de données avant d'apprendre
   double_dqn: true
   dueling: true
   gradient_clip: 10.0
-  tau: 0.005
+  tau: 0.001                   # FIX: soft update plus lent = stabilité
 
 ppo:
-  learning_rate: 0.0003
+  learning_rate: 0.0001        # FIX: réduit (0.0003 trop agressif début)
   gamma: 0.99
   lam: 0.95
   clip_eps: 0.2
-  entropy_coef: 0.01
+  entropy_coef: 0.05           # FIX: augmenté pour forcer l'exploration des phases
   value_coef: 0.5
-  update_epochs: 10
-  n_steps: 2048
-  mini_batch_size: 64
+  update_epochs: 4             # FIX: réduit (10 = overfitting sur peu de données)
+  n_steps: 3600                # FIX: = 1 épisode complet (cohérent avec SUMO)
+  mini_batch_size: 128         # FIX: plus grand batch par rapport à n_steps
   gradient_clip: 0.5
 
 network:
@@ -75,10 +75,10 @@ network:
   activation: "relu"
 
 reward:
-  wait_multiplier: -0.1
-  throughput_multiplier: 1.0
-  queue_multiplier: -0.05
-  switch_penalty: -2.0
+  wait_multiplier: -0.001      # FIX: réduit ×100 (évite gradients -7M qui explosent)
+  throughput_multiplier: 5.0   # FIX: augmenté pour signal positif dominant
+  queue_multiplier: -0.01      # FIX: réduit proportionnellement
+  switch_penalty: -0.5         # FIX: réduit (ne pas sur-pénaliser les changements)
   normalize: true
 
 paths:

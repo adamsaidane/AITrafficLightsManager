@@ -22,6 +22,7 @@ import torch.optim as optim
 from torch.distributions import Categorical
 
 from agents.base_agent import BaseAgent
+from utils.gpu_config import DEVICE
 
 
 # =========================================================================
@@ -110,11 +111,13 @@ class PPOAgent(BaseAgent):
         self.mini_batch_size = ppo_cfg["mini_batch_size"]
         self.grad_clip = ppo_cfg["gradient_clip"]
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = DEVICE   # centralised GPU selection
         self.net = ActorCritic(obs_dim, action_dim, net_cfg["hidden_sizes"]).to(self.device)
         self.optimizer = optim.Adam(self.net.parameters(), lr=ppo_cfg["learning_rate"],
                                     eps=1e-5)
         self.buffer = RolloutBuffer()
+        # Pin memory for fast CPU→GPU transfers if using CUDA
+        self._pin = (self.device.type == "cuda")
 
     # ------------------------------------------------------------------ #
 
@@ -169,7 +172,11 @@ class PPOAgent(BaseAgent):
 
         advantages, returns = self._compute_gae(last_value)
 
-        states = torch.FloatTensor(np.array(self.buffer.states)).to(self.device)
+        states_np = np.array(self.buffer.states)
+        states = torch.FloatTensor(states_np)
+        if self._pin: states = states.pin_memory()
+        states = states.to(self.device, non_blocking=True)
+
         actions = torch.LongTensor(self.buffer.actions).to(self.device)
         old_log_probs = torch.FloatTensor(self.buffer.log_probs).to(self.device)
         adv = torch.FloatTensor(advantages).to(self.device)

@@ -189,11 +189,20 @@ class SUMOEnvironment:
         delta_wait = self._prev_waiting - total_wait   # positive = improvement
         self._prev_waiting = total_wait
 
-        reward = (self.w_wait * total_wait
-                  + self.w_thru * arrived
-                  + self.w_queue * total_queue
+        # Normalise raw values by number of lanes to keep reward scale stable
+        n_lanes = max(len(self.lanes), 1)
+        norm_wait  = total_wait  / n_lanes
+        norm_queue = total_queue / n_lanes
+        norm_delta = delta_wait  / n_lanes
+
+        reward = (self.w_wait   * norm_wait
+                  + self.w_thru  * arrived
+                  + self.w_queue * norm_queue
                   + (self.w_switch if phase_changed else 0.0)
-                  + 0.3 * delta_wait)
+                  + 0.1 * norm_delta)
+
+        # Hard clip: prevents extreme gradient magnitudes during early training
+        reward = float(np.clip(reward, -200.0, 200.0))
 
         info = {
             "total_waiting": total_wait,
@@ -201,4 +210,4 @@ class SUMOEnvironment:
             "arrived": arrived,
             "phase_changed": phase_changed,
         }
-        return float(reward), info
+        return reward, info

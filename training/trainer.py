@@ -139,6 +139,7 @@ class Trainer:
                 break
 
         env.close()
+        agent.on_episode_end()   # hard target sync every N episodes
         return dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
                     queue=ep_queue / max(step, 1), arrived=ep_arrived,
                     epsilon=agent.epsilon,

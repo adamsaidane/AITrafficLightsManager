@@ -33,6 +33,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from agents.base_agent import BaseAgent
+from utils.gpu_config import DEVICE
 
 
 # =========================================================================
@@ -129,32 +130,46 @@ class PrioritisedReplayBuffer:
 # =========================================================================
 
 class DQNAgent(BaseAgent):
-    """Double Dueling DQN with Prioritised Replay."""
+    """
+    Double Dueling DQN with Prioritised Replay.
+
+    Fixes applied vs v1:
+    - Hard target-net sync every `target_hard_sync` episodes (prevents drift)
+    - Learning is frozen for the first `min_replay_size` steps (no updates on
+      tiny, biased buffer)
+    - Running reward normalisation (mean/std tracked online) so the network
+      sees a stable [-3, +3] reward range regardless of scaling
+    - `update_every` flag: only update every N steps to decouple collection
+      from learning speed
+    """
 
     def __init__(self, obs_dim: int, action_dim: int, config: dict) -> None:
         dqn_cfg = config["dqn"]
-        net_cfg = config["network"]
+        net_cfg  = config["network"]
 
-        self.action_dim = action_dim
-        self.gamma = dqn_cfg["gamma"]
-        self.batch_size = dqn_cfg["batch_size"]
-        self.target_update_freq = dqn_cfg["target_update_freq"]
+        self.action_dim  = action_dim
+        self.gamma       = dqn_cfg["gamma"]
+        self.batch_size  = dqn_cfg["batch_size"]
         self.min_replay_size = dqn_cfg["min_replay_size"]
-        self.grad_clip = dqn_cfg["gradient_clip"]
-        self.tau = dqn_cfg["tau"]
-        self.double_dqn = dqn_cfg["double_dqn"]
+        self.grad_clip   = dqn_cfg["gradient_clip"]
+        self.tau         = dqn_cfg["tau"]
+        self.double_dqn  = dqn_cfg["double_dqn"]
+        self.update_every = 4   # update network every 4 environment steps
 
-        # Epsilon schedule (linear decay)
-        self.epsilon = dqn_cfg["epsilon_start"]
-        self.epsilon_end = dqn_cfg["epsilon_end"]
+        # Hard sync target net every N episodes (new: prevents slow drift)
+        self.target_hard_sync = 50
+
+        # Epsilon — linear decay over epsilon_decay_steps
+        self.epsilon       = dqn_cfg["epsilon_start"]
+        self.epsilon_end   = dqn_cfg["epsilon_end"]
         self.epsilon_decay_steps = dqn_cfg["epsilon_decay_steps"]
         self._step = 0
 
-        # Beta schedule for PER (annealed from 0.4 → 1.0)
+        # Beta for PER IS weights
         self._beta_start = 0.4
         self._beta_steps = dqn_cfg["epsilon_decay_steps"]
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = DEVICE   # centralised GPU selection
         hidden = net_cfg["hidden_sizes"]
 
         self.online_net = DuelingDQN(obs_dim, action_dim, hidden).to(self.device)
@@ -162,8 +177,15 @@ class DQNAgent(BaseAgent):
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.target_net.eval()
 
-        self.optimizer = optim.Adam(self.online_net.parameters(), lr=dqn_cfg["learning_rate"])
+        self.optimizer = optim.Adam(self.online_net.parameters(),
+                                    lr=dqn_cfg["learning_rate"], eps=1e-5)
         self.replay = PrioritisedReplayBuffer(dqn_cfg["replay_buffer_size"])
+
+        # Running reward normalisation (Welford's algorithm)
+        self._rew_mean = 0.0
+        self._rew_var  = 1.0
+        self._rew_n    = 0
+        self._episode_count = 0
 
     # ------------------------------------------------------------------ #
 
@@ -178,6 +200,21 @@ class DQNAgent(BaseAgent):
             self.epsilon_end,
             1.0 - frac * (1.0 - self.epsilon_end)
         )
+
+    def _normalise_reward(self, r: float) -> float:
+        """Online Welford normalisation — keeps reward in ~[-3, +3]."""
+        self._rew_n += 1
+        old_mean = self._rew_mean
+        self._rew_mean += (r - old_mean) / self._rew_n
+        self._rew_var  += (r - old_mean) * (r - self._rew_mean)
+        std = max(np.sqrt(self._rew_var / max(self._rew_n, 1)), 1e-4)
+        return float(np.clip((r - self._rew_mean) / std, -5.0, 5.0))
+
+    def on_episode_end(self) -> None:
+        """Call at end of each episode to trigger hard target sync if due."""
+        self._episode_count += 1
+        if self._episode_count % self.target_hard_sync == 0:
+            self.target_net.load_state_dict(self.online_net.state_dict())
 
     # ------------------------------------------------------------------ #
     # BaseAgent interface
@@ -199,21 +236,25 @@ class DQNAgent(BaseAgent):
             return int(self.online_net(s).argmax(dim=1).item())
 
     def store(self, state, action, reward, next_state, done) -> None:
-        self.replay.push((state, action, reward, next_state, done))
+        norm_r = self._normalise_reward(reward)
+        self.replay.push((state, action, norm_r, next_state, done))
 
     def update(self, *args, **kwargs) -> dict:  # type: ignore[override]
+        # Only update every N steps (decouples collection from learning)
+        if self._step % self.update_every != 0:
+            return {}
         if len(self.replay) < self.min_replay_size:
             return {}
 
         states, actions, rewards, next_states, dones, indices, weights = \
             self.replay.sample(self.batch_size, self.beta)
 
-        s = torch.FloatTensor(states).to(self.device)
-        a = torch.LongTensor(actions).to(self.device)
-        r = torch.FloatTensor(rewards).to(self.device)
+        s  = torch.FloatTensor(states).to(self.device)
+        a  = torch.LongTensor(actions).to(self.device)
+        r  = torch.FloatTensor(rewards).to(self.device)
         ns = torch.FloatTensor(next_states).to(self.device)
-        d = torch.FloatTensor(dones).to(self.device)
-        w = torch.FloatTensor(weights).to(self.device)
+        d  = torch.FloatTensor(dones).to(self.device)
+        w  = torch.FloatTensor(weights).to(self.device)
 
         # Current Q
         current_q = self.online_net(s).gather(1, a.unsqueeze(1)).squeeze(1)
@@ -238,7 +279,7 @@ class DQNAgent(BaseAgent):
         nn.utils.clip_grad_norm_(self.online_net.parameters(), self.grad_clip)
         self.optimizer.step()
 
-        # Soft-update target network
+        # Soft target network update
         for tp, op in zip(self.target_net.parameters(), self.online_net.parameters()):
             tp.data.copy_(self.tau * op.data + (1.0 - self.tau) * tp.data)
 
@@ -247,11 +288,15 @@ class DQNAgent(BaseAgent):
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save({
-            "online_state_dict": self.online_net.state_dict(),
-            "target_state_dict": self.target_net.state_dict(),
+            "online_state_dict":    self.online_net.state_dict(),
+            "target_state_dict":    self.target_net.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
-            "epsilon": self.epsilon,
-            "step": self._step,
+            "epsilon":   self.epsilon,
+            "step":      self._step,
+            "rew_mean":  self._rew_mean,
+            "rew_var":   self._rew_var,
+            "rew_n":     self._rew_n,
+            "ep_count":  self._episode_count,
         }, path)
 
     def load(self, path: str) -> None:
@@ -259,5 +304,9 @@ class DQNAgent(BaseAgent):
         self.online_net.load_state_dict(ckpt["online_state_dict"])
         self.target_net.load_state_dict(ckpt["target_state_dict"])
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        self.epsilon = ckpt["epsilon"]
-        self._step = ckpt["step"]
+        self.epsilon         = ckpt["epsilon"]
+        self._step           = ckpt["step"]
+        self._rew_mean       = ckpt.get("rew_mean", 0.0)
+        self._rew_var        = ckpt.get("rew_var",  1.0)
+        self._rew_n          = ckpt.get("rew_n",    0)
+        self._episode_count  = ckpt.get("ep_count", 0)

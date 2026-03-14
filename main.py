@@ -110,6 +110,10 @@ class FixedTimeBaseline:
         self._timer = 0
         self._phase = 0
 
+    def reset(self) -> None:
+        self._timer = 0
+        self._phase = 0
+
     def get_greedy_action(self, obs) -> int:
         self._timer += 1
         if self._timer >= self.green_time:
@@ -170,41 +174,55 @@ class MaxPressureBaseline:
 
 class ActuatedBaseline:
     """
-    Feux actuated : comme FixedTime mais prolonge la phase verte
-    si des véhicules sont encore détectés sur les voies actives.
-    Extension max = max_green, extension min = min_green.
+    Feux actuated : étend la phase verte tant que des véhicules
+    arrivent sur les voies actives, avec un plancher (min_green)
+    et un plafond (max_green) stricts.
+
+    Logique correcte :
+      - Reste en vert TANT QUE demand > 0  (jusqu'à max_green)
+      - Change de phase si demand == 0 après min_green
+      - Ou force le changement à max_green
     """
 
     def __init__(self, config: dict, min_green: int = 15,
-                 max_green: int = 50, extension: int = 5) -> None:
+                 max_green: int = 45, extension: int = 5) -> None:
         sim = config["simulation"]
         self.lanes: List[str] = sim["lanes"]
         self.num_phases: int = len(sim["phases"])
         self.min_green = min_green
         self.max_green = max_green
-        self.extension = extension
         self._phase = 0
         self._timer = 0
 
-    def _has_demand(self) -> bool:
+    def _active_lanes_for_phase(self, phase_idx: int) -> List[str]:
+        """Retourne les voies associées à la phase courante."""
+        if phase_idx in (0, 2, 3, 6):   # phases NS
+            return [l for l in self.lanes if l.startswith(("N_", "S_"))]
+        return [l for l in self.lanes if l.startswith(("E_", "W_"))]
+
+    def _has_demand_on_active(self) -> bool:
+        """Vérifie si des véhicules approchent sur les voies actives."""
         try:
             import traci
             existing = set(traci.lane.getIDList())
+            active = self._active_lanes_for_phase(self._phase)
             return any(
                 traci.lane.getLastStepVehicleNumber(l) > 0
-                for l in self.lanes if l in existing
+                for l in active if l in existing
             )
         except Exception:
-            return False
+            return True  # conservateur : reste en vert si erreur
+
+    def reset(self) -> None:
+        self._phase = 0
+        self._timer = 0
 
     def get_greedy_action(self, obs) -> int:
-        self._timer += 1
-        # Force changement si max_green atteint
         if self._timer >= self.max_green:
             self._phase = (self._phase + 1) % self.num_phases
             self._timer = 0
-        # Permet extension si min_green passé ET trafic présent
-        elif self._timer >= self.min_green and not self._has_demand():
+        # Changer si plus de demande ET min_green passé
+        elif self._timer >= self.min_green and not self._has_demand_on_active():
             self._phase = (self._phase + 1) % self.num_phases
             self._timer = 0
         return self._phase
@@ -591,13 +609,35 @@ def main() -> None:
     config = load_config(args.config)
     ensure_sumo_cfg(config)
 
+    # ── GPU check ───────────────────────────────────────────────────────────
+    from utils.gpu_config import DEVICE, gpu_info, benchmark_gpu
+    banner("Configuration GPU")
+    info = gpu_info()
+    for k, v in info.items():
+        print(f"  {k:<20} : {v}")
+    if info["type"] != "cpu":
+        benchmark_gpu(1024)
+    else:
+        print("\n  ⚠ CPU détecté — l'entraînement sera très lent.")
+        print("  Installez PyTorch avec CUDA : https://pytorch.org/get-started/locally/")
+
     if args.quick:
         config["simulation"]["num_episodes"] = 50
         args.eval_episodes = 2
         print("  [Mode rapide] 50 épisodes, 2 évaluations par agent")
+        print("  ⚠ ATTENTION : les agents RL nécessitent ≥ 500 épisodes pour")
+        print("    converger. En mode --quick, leurs résultats seront mauvais.")
+        print("    Utilisez --quick uniquement pour vérifier que le code tourne.\n")
 
     if args.train_episodes:
         config["simulation"]["num_episodes"] = args.train_episodes
+
+    # Garde-fou : prévenir si episodes trop faible pour les agents RL
+    n_ep = config["simulation"]["num_episodes"]
+    if n_ep < 300 and not args.skip_training and not args.quick:
+        print(f"\n  ⚠ AVERTISSEMENT : {n_ep} épisodes peut être insuffisant.")
+        print("    Recommandé : ≥ 500 pour Q-Learning, ≥ 800 pour DQN/PPO.")
+        print("    Les agents RL risquent de performer moins bien que les baselines.\n")
 
     plots_dir  = config["paths"]["plots_dir"]
     models_dir = config["paths"]["models_dir"]
