@@ -1,3 +1,7 @@
+# ============================================================
+# Traffic RL Project - Master Configuration
+# ============================================================
+
 simulation:
   tl_id: "center"
   min_green_time: 10
@@ -26,14 +30,14 @@ simulation:
     - "W_to_C_2"
     - "W_to_C_3"
   phases:
-    0: "GggrGrrrGggrGrrr" # Nord-Sud droit
-    1: "GrrrGggrGrrrGggr" # Est-Ouest droit
-    2: "GggrGrrgGrrrGrrr" # Nord droit + Sud gauche
-    3: "GrrgGggrGrrrGrrr" # Sud droit + Nord gauche
-    4: "GrrrGrrrGggrGrrg" # Est droit + Ouest gauche
-    5: "GrrrGrrrGrrgGggr" # Ouest droit + Est gauche
-    6: "GrrgGrrrGrrgGrrr" # Nord+Sud gauche
-    7: "GrrrGrrgGrrrGrrg" # Est+Ouest gauche
+    0: "GggrGrrrGggrGrrr"
+    1: "GrrrGggrGrrrGggr"
+    2: "GggrGrrgGrrrGrrr"
+    3: "GrrgGggrGrrrGrrr"
+    4: "GrrrGrrrGggrGrrg"
+    5: "GrrrGrrrGrrgGggr"
+    6: "GrrgGrrrGrrgGrrr"
+    7: "GrrrGrrgGrrrGrrg"
 
 q_learning:
   alpha: 0.05                  # FIX: augmenté (0.01 trop lent pour 500 ep)

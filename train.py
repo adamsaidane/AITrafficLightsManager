@@ -2,7 +2,7 @@
 train.py — Entry point for training a traffic RL agent.
 
 Usage examples:
-    python train.py # DQN with default config
+    python train.py                          # DQN with default config
     python train.py --agent dqn
     python train.py --agent ppo
     python train.py --agent qlearning

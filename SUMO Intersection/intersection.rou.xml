@@ -1,46 +1,49 @@
 <routes>
     <!-- Types de véhicules -->
     <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5" maxSpeed="50"/>
-    
+
     <!-- Routes possibles -->
-    <!-- Depuis le Nord -->
-    <route id="N_to_W" edges="N_to_C C_to_W"/>  <!-- Droite -->
-    <route id="N_to_S" edges="N_to_C C_to_S"/>  <!-- Tout droit -->
-    <route id="N_to_E" edges="N_to_C C_to_E"/>  <!-- Gauche -->
-    
-    <!-- Depuis le Sud -->
+    <route id="N_to_W" edges="N_to_C C_to_W"/>
+    <route id="N_to_S" edges="N_to_C C_to_S"/>
+    <route id="N_to_E" edges="N_to_C C_to_E"/>
     <route id="S_to_E" edges="S_to_C C_to_E"/>
     <route id="S_to_N" edges="S_to_C C_to_N"/>
     <route id="S_to_W" edges="S_to_C C_to_W"/>
-    
-    <!-- Depuis l'Est -->
     <route id="E_to_N" edges="E_to_C C_to_N"/>
     <route id="E_to_W" edges="E_to_C C_to_W"/>
     <route id="E_to_S" edges="E_to_C C_to_S"/>
-    
-    <!-- Depuis l'Ouest -->
     <route id="W_to_S" edges="W_to_C C_to_S"/>
     <route id="W_to_E" edges="W_to_C C_to_E"/>
     <route id="W_to_N" edges="W_to_C C_to_N"/>
-    
-    <!-- Flux de véhicules avec distribution réaliste -->
-    <!-- NORD: 40% tout droit, 30% droite, 30% gauche -->
-    <flow id="flow_N_straight" type="car" begin="0" end="3600" probability="0.08" route="N_to_S" departLane="1"/>
-    <flow id="flow_N_right" type="car" begin="0" end="3600" probability="0.06" route="N_to_W" departLane="3"/>
-    <flow id="flow_N_left" type="car" begin="0" end="3600" probability="0.06" route="N_to_E" departLane="0"/>
 
-    <!-- SUD: 40% tout droit, 30% droite, 30% gauche -->
-    <flow id="flow_S_straight" type="car" begin="0" end="3600" probability="0.08" route="S_to_N" departLane="1"/>
-    <flow id="flow_S_right" type="car" begin="0" end="3600" probability="0.06" route="S_to_E" departLane="3"/>
-    <flow id="flow_S_left" type="car" begin="0" end="3600" probability="0.06" route="S_to_W" departLane="0"/>
+    <!--
+        FLUX DE TRAFIC — DENSITE 50% (curriculum etape 1)
+        Originales : straight=0.08  turns=0.06
+        50%        : straight=0.04  turns=0.03
+        Corrections:
+          - departLane="best"    : SUMO choisit la voie optimale
+          - departSpeed="max"    : pas de demarrage lent qui bouche l'entree
+          Pour changer density : python patch_traffic.py -rou intersection.rou.xml -density 0.7
+    -->
 
-    <!-- EST: 40% tout droit, 30% droite, 30% gauche -->
-    <flow id="flow_E_straight" type="car" begin="0" end="3600" probability="0.08" route="E_to_W" departLane="1"/>
-    <flow id="flow_E_right" type="car" begin="0" end="3600" probability="0.06" route="E_to_N" departLane="3"/>
-    <flow id="flow_E_left" type="car" begin="0" end="3600" probability="0.06" route="E_to_S" departLane="0"/>
+    <!-- NORD -->
+    <flow id="flow_N_straight" type="car" begin="0" end="3600" probability="0.06" route="N_to_S" departLane="best"/>
+    <flow id="flow_N_right"    type="car" begin="0" end="3600" probability="0.03" route="N_to_W" departLane="best"/>
+    <flow id="flow_N_left"     type="car" begin="0" end="3600" probability="0.03" route="N_to_E" departLane="best"/>
 
-    <!-- OUEST: 40% tout droit, 30% droite, 30% gauche -->
-    <flow id="flow_W_straight" type="car" begin="0" end="3600" probability="0.08" route="W_to_E" departLane="1"/>
-    <flow id="flow_W_right" type="car" begin="0" end="3600" probability="0.06" route="W_to_S" departLane="3"/>
-    <flow id="flow_W_left" type="car" begin="0" end="3600" probability="0.06" route="W_to_N" departLane="0"/>
+    <!-- SUD -->
+    <flow id="flow_S_straight" type="car" begin="0" end="3600" probability="0.06" route="S_to_N" departLane="best"/>
+    <flow id="flow_S_right"    type="car" begin="0" end="3600" probability="0.03" route="S_to_E" departLane="best"/>
+    <flow id="flow_S_left"     type="car" begin="0" end="3600" probability="0.03" route="S_to_W" departLane="best"/>
+
+    <!-- EST -->
+    <flow id="flow_E_straight" type="car" begin="0" end="3600" probability="0.06" route="E_to_W" departLane="best"/>
+    <flow id="flow_E_right"    type="car" begin="0" end="3600" probability="0.03" route="E_to_N" departLane="best"/>
+    <flow id="flow_E_left"     type="car" begin="0" end="3600" probability="0.03" route="E_to_S" departLane="best"/>
+
+    <!-- OUEST -->
+    <flow id="flow_W_straight" type="car" begin="0" end="3600" probability="0.06" route="W_to_E" departLane="best"/>
+    <flow id="flow_W_right"    type="car" begin="0" end="3600" probability="0.03" route="W_to_S" departLane="best"/>
+    <flow id="flow_W_left"     type="car" begin="0" end="3600" probability="0.03" route="W_to_N" departLane="best"/>
+
 </routes>

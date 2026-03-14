@@ -1,3 +1,8 @@
+"""
+sumo_env.py — SUMO Traffic Signal Environment
+Compatible with SUMO/TraCI. Provides rich state vectors for deep RL.
+"""
+
 from __future__ import annotations
 
 import os
@@ -17,10 +22,10 @@ class SUMOEnvironment:
     Gymnasium-style SUMO environment for single-intersection traffic control.
 
     State vector (per lane, flattened):
-        - queue_length (normalised by max_vehicles)
-        - waiting_time (normalised by 300 s)
-        - mean_speed (normalised by max_speed, inverted → lower is worse)
-        - vehicle_density (normalised by max_vehicles)
+        - queue_length          (normalised by max_vehicles)
+        - waiting_time          (normalised by 300 s)
+        - mean_speed            (normalised by max_speed, inverted → lower is worse)
+        - vehicle_density       (normalised by max_vehicles)
         + scalar: current_phase (one-hot encoded)
         + scalar: phase_duration (normalised by MAX_GREEN_TIME)
 
@@ -63,6 +68,10 @@ class SUMOEnvironment:
         self.obs_dim: int = num_lanes * 4 + self.num_phases + 1
         self.action_dim: int = self.num_phases
 
+    # ------------------------------------------------------------------ #
+    # Lifecycle
+    # ------------------------------------------------------------------ #
+
     def start(self) -> np.ndarray:
         """Launch SUMO and return initial observation."""
         if not SUMO_AVAILABLE:
@@ -88,6 +97,10 @@ class SUMOEnvironment:
             traci.close()
         except Exception:
             pass
+
+    # ------------------------------------------------------------------ #
+    # Core step
+    # ------------------------------------------------------------------ #
 
     def step(self, action: Optional[int] = None) -> Tuple[np.ndarray, float, bool, dict]:
         """
@@ -122,6 +135,10 @@ class SUMOEnvironment:
                 or traci.simulation.getMinExpectedNumber() == 0)
         return obs, reward, done, info
 
+    # ------------------------------------------------------------------ #
+    # Phase control
+    # ------------------------------------------------------------------ #
+
     def can_change_phase(self) -> bool:
         return (not self.is_yellow
                 and self.time_on_phase >= self.min_green)
@@ -139,6 +156,10 @@ class SUMOEnvironment:
         self.is_yellow = False
         self.time_on_phase = 0
         self._pending_phase = None
+
+    # ------------------------------------------------------------------ #
+    # Observation
+    # ------------------------------------------------------------------ #
 
     def _get_obs(self) -> np.ndarray:
         """
@@ -175,6 +196,10 @@ class SUMOEnvironment:
         feats.append(min(self.time_on_phase / self.max_green, 1.0))
 
         return np.array(feats, dtype=np.float32)
+
+    # ------------------------------------------------------------------ #
+    # Reward
+    # ------------------------------------------------------------------ #
 
     def _compute_reward(self, phase_changed: bool) -> Tuple[float, dict]:
         lane_ids = set(traci.lane.getIDList()) if SUMO_AVAILABLE else set()
