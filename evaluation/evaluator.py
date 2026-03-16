@@ -72,6 +72,7 @@ class Evaluator:
         obs = env.start()
 
         ep_reward, ep_wait, ep_queue, ep_arrived = 0.0, 0.0, 0.0, 0.0
+        phase_counts: Dict[int, int] = {}
         step = 0
         total_steps = self.cfg["simulation"]["total_steps"]
 
@@ -80,6 +81,14 @@ class Evaluator:
                 action = agent.get_greedy_action(obs)
             else:
                 action = agent.select_action(obs)
+
+            # Decode composite action for phase tracking
+            if hasattr(env, 'decode_action') and action >= env.num_phases:
+                phase_id, _ = env.decode_action(action)
+            else:
+                phase_id = action % env.num_phases
+
+            phase_counts[phase_id] = phase_counts.get(phase_id, 0) + 1
             obs, reward, done, info = env.step(action)
 
             ep_reward += reward
@@ -90,12 +99,15 @@ class Evaluator:
             if done:
                 break
 
+        phase_log = env.get_phase_log() if hasattr(env, 'get_phase_log') else []
         env.close()
         return dict(
             reward=ep_reward,
             mean_waiting=ep_wait / max(step, 1),
             mean_queue=ep_queue / max(step, 1),
             total_arrived=ep_arrived,
+            phase_counts=phase_counts,
+            phases_used=len(phase_counts),
         )
 
     def evaluate_agent(self, agent_type: str, checkpoint: str,

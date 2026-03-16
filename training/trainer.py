@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import os
 import csv
+import json
 import time
-from typing import Optional
+from collections import defaultdict
+from typing import Optional, List, Tuple
 
 import numpy as np
 
@@ -79,6 +81,49 @@ class Trainer:
             raise ValueError(f"Unknown agent type: {self.agent_type}")
 
     # ------------------------------------------------------------------ #
+    # Phase report
+    # ------------------------------------------------------------------ #
+
+    def _phase_report(self, phase_log: List[Tuple[int, int]],
+                      episode: int, num_phases: int) -> Tuple[str, dict]:
+        """
+        Build a human-readable report and a stats dict from phase_log.
+        phase_log: list of (phase_id, duration_steps)
+        Returns (report_string, stats_dict)
+        """
+        counts    = defaultdict(int)
+        durations = defaultdict(list)
+        for phase_id, dur in phase_log:
+            counts[phase_id]    += 1
+            durations[phase_id].append(dur)
+
+        total = sum(counts.values()) or 1
+        lines = [f"  Ep {episode:>4} — {total} decisions de phase :"]
+
+        for ph in sorted(counts):
+            n   = counts[ph]
+            pct = 100 * n / total
+            avg = sum(durations[ph]) / n
+            mn  = min(durations[ph])
+            mx  = max(durations[ph])
+            lines.append(
+                f"    Phase {ph} : {n:>3}x ({pct:>5.1f}%)  "
+                f"moy={avg:.1f}s  min={mn}s  max={mx}s"
+            )
+
+        unused = [i for i in range(num_phases) if i not in counts]
+        if unused:
+            lines.append(f"    Phases non utilisees : {unused}")
+
+        stats = {
+            "phase_counts":   json.dumps({str(k): v for k, v in counts.items()}),
+            "phases_used":    len(counts),
+            "dominant_phase": max(counts, key=counts.get) if counts else -1,
+            "dominant_pct":   round(100 * max(counts.values()) / total, 1) if counts else 0,
+        }
+        return "\n".join(lines), stats
+
+    # ------------------------------------------------------------------ #
     # Episode runners
     # ------------------------------------------------------------------ #
 
@@ -107,10 +152,18 @@ class Trainer:
                 break
 
         agent.decay_epsilon()
+        phase_log = env.get_phase_log()
         env.close()
-        return dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
-                    queue=ep_queue / max(step, 1), arrived=ep_arrived,
-                    epsilon=agent.epsilon)
+
+        report, phase_stats = self._phase_report(
+            phase_log, episode, env.num_phases)
+
+        result = dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
+                      queue=ep_queue / max(step, 1), arrived=ep_arrived,
+                      epsilon=agent.epsilon)
+        result.update(phase_stats)
+        result["_phase_report"] = report
+        return result
 
     def _run_episode_dqn(self, env: SUMOEnvironment, episode: int) -> dict:
         agent: DQNAgent = self.agent  # type: ignore
@@ -138,12 +191,20 @@ class Trainer:
             if done:
                 break
 
+        phase_log = env.get_phase_log()
         env.close()
         agent.on_episode_end()   # hard target sync every N episodes
-        return dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
-                    queue=ep_queue / max(step, 1), arrived=ep_arrived,
-                    epsilon=agent.epsilon,
-                    loss=float(np.mean(losses)) if losses else 0.0)
+
+        report, phase_stats = self._phase_report(
+            phase_log, episode, env.num_phases)
+
+        result = dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
+                      queue=ep_queue / max(step, 1), arrived=ep_arrived,
+                      epsilon=agent.epsilon,
+                      loss=float(np.mean(losses)) if losses else 0.0)
+        result.update(phase_stats)
+        result["_phase_report"] = report
+        return result
 
     def _run_episode_ppo(self, env: SUMOEnvironment, episode: int) -> dict:
         agent: PPOAgent = self.agent  # type: ignore
@@ -175,10 +236,18 @@ class Trainer:
                 if done:
                     break
 
+        phase_log = env.get_phase_log()
         env.close()
+        agent.on_episode_end(self.num_episodes)
+
+        report, phase_stats = self._phase_report(
+            phase_log, episode, env.num_phases)
+
         result = dict(reward=ep_reward, waiting=ep_wait / max(step, 1),
                       queue=ep_queue / max(step, 1), arrived=ep_arrived)
         result.update(update_metrics)
+        result.update(phase_stats)
+        result["_phase_report"] = report   # printed by train loop
         return result
 
     # ------------------------------------------------------------------ #
@@ -209,17 +278,31 @@ class Trainer:
                 stats = self._run_episode_ppo(env, ep)
 
             elapsed = time.time() - t0
-            self.metrics.record(ep, stats)
-            self.logger.log_episode(ep, stats)
+            # Strip internal keys before logging
+            loggable = {k: v for k, v in stats.items()
+                        if not k.startswith("_")}
+            self.metrics.record(ep, loggable)
+            self.logger.log_episode(ep, loggable)
 
             if ep % self.log_interval == 0:
                 avg = self.metrics.recent_avg(10)
+                extra = ""
+                if "epsilon" in stats:
+                    extra += f" | e={stats['epsilon']:.3f}"
+                if "entropy_coef" in stats:
+                    extra += f" | H={stats['entropy_coef']:.3f}"
+                if "phases_used" in stats:
+                    extra += (f" | phases={stats['phases_used']}/8"
+                              f" | dom={stats['dominant_pct']:.0f}%")
                 print(f"  Ep {ep:>4}/{self.num_episodes} | "
                       f"R={stats['reward']:>8.1f} | Avg10={avg['reward']:>8.1f} | "
                       f"Wait={stats['waiting']:>6.1f}s | "
                       f"Arrived={stats['arrived']:>4.0f} | "
-                      f"t={elapsed:.1f}s" +
-                      (f" | ε={stats['epsilon']:.3f}" if "epsilon" in stats else ""))
+                      f"t={elapsed:.1f}s" + extra)
+
+            # Print detailed phase report for PPO every log_interval
+            if "_phase_report" in stats and ep % self.log_interval == 0:
+                print(stats["_phase_report"])
 
             if ep % self.save_interval == 0 or ep == self.num_episodes:
                 self._save_checkpoint(ep)

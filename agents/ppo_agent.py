@@ -101,33 +101,53 @@ class PPOAgent(BaseAgent):
         ppo_cfg = config["ppo"]
         net_cfg = config["network"]
 
-        self.gamma = ppo_cfg["gamma"]
-        self.lam = ppo_cfg["lam"]
-        self.clip_eps = ppo_cfg["clip_eps"]
-        self.entropy_coef = ppo_cfg["entropy_coef"]
-        self.value_coef = ppo_cfg["value_coef"]
-        self.update_epochs = ppo_cfg["update_epochs"]
-        self.n_steps = ppo_cfg["n_steps"]
+        self.action_dim     = action_dim
+        self.gamma          = ppo_cfg["gamma"]
+        self.lam            = ppo_cfg["lam"]
+        self.clip_eps       = ppo_cfg["clip_eps"]
+        self.value_coef     = ppo_cfg["value_coef"]
+        self.update_epochs  = ppo_cfg["update_epochs"]
+        self.n_steps        = ppo_cfg["n_steps"]
         self.mini_batch_size = ppo_cfg["mini_batch_size"]
-        self.grad_clip = ppo_cfg["gradient_clip"]
+        self.grad_clip      = ppo_cfg["gradient_clip"]
 
-        self.device = DEVICE   # centralised GPU selection
+        # Entropy decay: starts high to force exploration, decays to floor
+        self.entropy_coef_start = ppo_cfg["entropy_coef_start"]
+        self.entropy_coef_end   = ppo_cfg["entropy_coef_end"]
+        self.entropy_coef       = self.entropy_coef_start
+        self._episode           = 0
+
+        # Residual epsilon-greedy: small prob of random action even in exploit mode
+        # Prevents hard collapse onto a single phase
+        self.epsilon_residual = ppo_cfg["epsilon_residual"]
+
+        self.device = DEVICE
         self.net = ActorCritic(obs_dim, action_dim, net_cfg["hidden_sizes"]).to(self.device)
         self.optimizer = optim.Adam(self.net.parameters(), lr=ppo_cfg["learning_rate"],
                                     eps=1e-5)
         self.buffer = RolloutBuffer()
-        # Pin memory for fast CPU→GPU transfers if using CUDA
         self._pin = (self.device.type == "cuda")
 
     # ------------------------------------------------------------------ #
 
     def select_action(self, state: np.ndarray) -> int:
+        import random as _rng
         s = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
             action, log_prob, value = self.net.act(s)
-        # Store for later update
+        # Residual epsilon-greedy: forces exploration of unused phases
+        if _rng.random() < self.epsilon_residual:
+            action_int = _rng.randrange(self.action_dim)
+            # Recompute log_prob for the random action (needed for PPO update)
+            logits, _ = self.net(s)
+            from torch.distributions import Categorical as _Cat
+            dist = _Cat(logits=logits)
+            action_t = torch.tensor([action_int], device=self.device)
+            log_prob = dist.log_prob(action_t)
+        else:
+            action_int = int(action.item())
         self._last = (log_prob.item(), value.item())
-        return int(action.item())
+        return action_int
 
     def store(self, state, action, reward, done) -> None:
         log_prob, value = self._last
@@ -216,11 +236,21 @@ class PPOAgent(BaseAgent):
         self.buffer.clear()
         denom = max(update_count, 1)
         return {
-            "loss": total_loss / denom,
-            "pg_loss": total_pg / denom,
-            "val_loss": total_val / denom,
-            "entropy": total_ent / denom,
+            "loss":       total_loss / denom,
+            "pg_loss":    total_pg   / denom,
+            "val_loss":   total_val  / denom,
+            "entropy":    total_ent  / denom,
+            "entropy_coef": self.entropy_coef,
         }
+
+    def on_episode_end(self, total_episodes: int) -> None:
+        """Decay entropy coefficient linearly over training."""
+        self._episode += 1
+        frac = min(self._episode / max(total_episodes, 1), 1.0)
+        self.entropy_coef = (
+            self.entropy_coef_start
+            - frac * (self.entropy_coef_start - self.entropy_coef_end)
+        )
 
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)

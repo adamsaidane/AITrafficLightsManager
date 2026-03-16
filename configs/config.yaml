@@ -6,6 +6,7 @@ simulation:
   tl_id: "center"
   min_green_time: 10
   max_green_time: 60
+  duration_buckets: [10, 20, 30, 45, 60]
   yellow_time: 3
   total_steps: 3600
   num_episodes: 500
@@ -63,15 +64,20 @@ dqn:
   tau: 0.001                   # FIX: soft update plus lent = stabilité
 
 ppo:
-  learning_rate: 0.0001        # FIX: réduit (0.0003 trop agressif début)
+  learning_rate: 0.0001
   gamma: 0.99
   lam: 0.95
   clip_eps: 0.2
-  entropy_coef: 0.05           # FIX: augmenté pour forcer l'exploration des phases
+  # Entropy decay: starts high (forces all phases) → decays to floor
+  entropy_coef_start: 0.5      # FIX: fort au debut pour contrer le mode collapse
+  entropy_coef_end: 0.01       # plancher apres convergence
+  entropy_coef: 0.5            # valeur courante (mise a jour par on_episode_end)
+  # Residual epsilon: 5% de decisions aleatoires permanentes
+  epsilon_residual: 0.05       # FIX: empeche le collapse sur 1 phase
   value_coef: 0.5
-  update_epochs: 4             # FIX: réduit (10 = overfitting sur peu de données)
-  n_steps: 3600                # FIX: = 1 épisode complet (cohérent avec SUMO)
-  mini_batch_size: 128         # FIX: plus grand batch par rapport à n_steps
+  update_epochs: 8             # FIX: plus de passes sur les donnees collectees
+  n_steps: 1024                # FIX: plus court = gradient moins correle temporellement
+  mini_batch_size: 128
   gradient_clip: 0.5
 
 network:

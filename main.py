@@ -249,27 +249,37 @@ def run_episode(agent, config: dict) -> Dict:
     step = 0
 
     while step < total_steps:
-        action = agent.get_greedy_action(obs)
-        phase_counts[action] = phase_counts.get(action, 0) + 1
-        obs, reward, done, info = env.step(action)
+        raw_action = agent.get_greedy_action(obs)
+        # Baselines return a phase_id directly (not composite).
+        # For composite-action agents (DQN/PPO with action_dim=40),
+        # decode to get the phase_id for counting purposes.
+        if hasattr(env, 'decode_action') and raw_action >= env.num_phases:
+            phase_id, _ = env.decode_action(raw_action)
+        else:
+            phase_id = raw_action % env.num_phases  # safe fallback
+        phase_counts[phase_id] = phase_counts.get(phase_id, 0) + 1
+        obs, reward, done, info = env.step(raw_action)
 
-        ep_reward += reward
-        ep_wait   += info["total_waiting"]
-        ep_queue  += info["total_queue"]
+        ep_reward  += reward
+        ep_wait    += info["total_waiting"]
+        ep_queue   += info["total_queue"]
         ep_arrived += info["arrived"]
         step += 1
         if done:
             break
 
+    # Collect detailed phase log (duration per phase) from env
+    phase_log = env.get_phase_log() if hasattr(env, 'get_phase_log') else []
     env.close()
     n = max(step, 1)
     return {
-        "reward":       ep_reward,
-        "mean_waiting": ep_wait   / n,
-        "mean_queue":   ep_queue  / n,
+        "reward":        ep_reward,
+        "mean_waiting":  ep_wait   / n,
+        "mean_queue":    ep_queue  / n,
         "total_arrived": ep_arrived,
-        "steps":        step,
-        "phase_counts": phase_counts,
+        "steps":         step,
+        "phase_counts":  phase_counts,
+        "phase_log":     phase_log,
     }
 
 
@@ -290,19 +300,30 @@ def evaluate_agent(agent, config: dict, n_episodes: int,
               f"wait={r['mean_waiting']:>6.1f}s | "
               f"arrivés={r['total_arrived']:>4.0f}")
 
-    keys = [k for k in results[0] if k != "phase_counts"]
+    # Clés numériques seulement — exclure dicts, listes, strings
+    NUMERIC_KEYS = {"reward", "mean_waiting", "mean_queue", "total_arrived", "steps"}
     agg: Dict = {}
-    for k in keys:
+    for k in NUMERIC_KEYS:
+        if k not in results[0]:
+            continue
         vals = [r[k] for r in results]
-        agg[f"{k}_mean"] = float(np.mean(vals))
-        agg[f"{k}_std"]  = float(np.std(vals))
+        try:
+            agg[f"{k}_mean"] = float(np.mean(vals))
+            agg[f"{k}_std"]  = float(np.std(vals))
+        except (TypeError, ValueError):
+            pass   # skip non-numeric fields silently
 
-    # Fusionne les phase_counts
+    # Fusionne les phase_counts (dict) séparément
     merged: Dict[int, int] = {}
     for r in results:
-        for ph, cnt in r["phase_counts"].items():
+        for ph, cnt in r.get("phase_counts", {}).items():
             merged[ph] = merged.get(ph, 0) + cnt
     agg["phase_counts"] = merged
+
+    # Nombre de phases utilisées en moyenne
+    agg["phases_used_mean"] = float(
+        np.mean([len(r.get("phase_counts", {})) for r in results])
+    )
 
     return agg
 
